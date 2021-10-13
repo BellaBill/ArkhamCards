@@ -14,8 +14,9 @@ const USES_REGEX = new RegExp('.*Uses\\s*\\([0-9]+(\\s\\[per_investigator\\])?\\
 const BONDED_REGEX = new RegExp('.*Bonded\\s*\\((.+?)\\)\\..*');
 const SEAL_REGEX = new RegExp('.*Seal \\(.+\\)\\..*');
 const HEALS_HORROR_REGEX = new RegExp('[Hh]eals? (that much )?((\\d+|all|(X total)) damage (from that asset )?(and|or) )?((\\d+|all|(X total)) )?horror');
-export const SEARCH_REGEX = /["“”‹›‘’«»〞〝〟＂❛❜❝❞❮❯\(\)'\-\.]/g;
+export const SEARCH_REGEX = /["“”‹›«»〞〝〟„＂❝❞‘’❛❜‛',‚❮❯\(\)\-\.…]/g;
 
+export const CARD_NUM_COLUMNS = 125;
 function arkham_num(value: number | null | undefined) {
   if (value === null || value === undefined) {
     return '-';
@@ -71,17 +72,20 @@ const FEMININE_INVESTIGATORS = new Set([
   '05006', // Marie
   '06002', // Mandy Thompson
   '06005', // Patrice
-  '60301', // Wini
-  '60401', // Jacqueline
-  '60501', // Stella
   '07001', // Sister Mary
   '07002', // Amanda Sharpe
   '07003', // Trish
+  '08001', // Daniella
+  '08020', // Lily Chen
+  '60301', // Wini
+  '60401', // Jacqueline
+  '60501', // Stella
   '05046', // Gavriella Mizrah
   '05049', // Penny White
   '98001', // Alt-Jenny
   '98019', // Gloria
   '98010', // Alt-Carolyn
+  '99001', // Old Marie
 ]);
 
 const HEADER_SELECT = {
@@ -248,6 +252,12 @@ export default class Card {
 
   @Column('text', { nullable: true })
   public faction2_name?: string;
+
+  @Column('text', { nullable: true })
+  public faction3_code?: FactionCodeType;
+
+  @Column('text', { nullable: true })
+  public faction3_name?: string;
 
   @Column('integer', { nullable: true })
   public position?: number;
@@ -773,6 +783,10 @@ export default class Card {
         if (json.faction2_code && json.faction2_name) {
           const faction1 = Card.factionCodeToName(json.faction_code, json.faction_name);
           const faction2 = Card.factionCodeToName(json.faction2_code, json.faction2_name);
+          if (json.faction3_code && json.faction3_name) {
+            const faction3 = Card.factionCodeToName(json.faction3_code, json.faction3_name);
+            return `${faction1} / ${faction2} / ${faction3}`;
+          }
           return `${faction1} / ${faction2}`;
         }
         return Card.factionCodeToName(json.faction_code, json.faction_name);
@@ -810,6 +824,7 @@ export default class Card {
       t`Asset: Ally. Arcane`,
       t`Asset: Body. Arcane`,
       t`Asset: Hand. Arcane`,
+      t`Asset: Hand x2. Arcane`,
       t`Asset: Body. Hand x2`,
       t`Asset: Other`,
       t`Event`,
@@ -872,6 +887,8 @@ export default class Card {
                 return t`Asset: Body. Hand x2`;
               case 'Hand. Arcane':
                 return t`Asset: Hand. Arcane`;
+              case 'Hand x2. Arcane':
+                return t`Asset: Hand x2. Arcane`;
               case 'Ally. Arcane':
                 return t`Asset: Ally. Arcane`;
               default:

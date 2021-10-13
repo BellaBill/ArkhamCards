@@ -78,7 +78,7 @@ export default function BackupView({ componentId, safeMode }: BackupProps & Navi
       return;
     }
     try {
-      const res = await DocumentPicker.pick({
+      const res = await DocumentPicker.pickSingle({
         type: [DocumentPicker.types.allFiles],
       });
       if (!res.name.endsWith('.acb') && !res.name.endsWith('.json') && !res.name.endsWith('.null')) {
@@ -96,7 +96,7 @@ export default function BackupView({ componentId, safeMode }: BackupProps & Navi
         return;
       }
       // We got the file
-      const json = JSON.parse(await safeReadFile(res.fileCopyUri));
+      const json = JSON.parse(await safeReadFile(res.uri));
       const campaigns: Campaign[] = [];
       forEach(values(json.campaigns), campaign => {
         campaigns.push(campaignFromJson(campaign));

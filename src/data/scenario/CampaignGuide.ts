@@ -354,11 +354,12 @@ export default class CampaignGuide {
       id.encodedScenarioId,
       scenario,
       this,
-      campaignLog
+      campaignLog,
+      !!standalone
     );
     if (!campaignState.startedScenario(id.encodedScenarioId)) {
       if (
-        (campaignLog.campaignData.result && scenarioGuide.scenarioType() !== 'epilogue') ||
+        (campaignLog.campaignData.result === 'lose' && scenarioGuide.scenarioType() !== 'epilogue') ||
         campaignLog.scenarioStatus(id.encodedScenarioId) === 'skipped'
       ) {
         return [{

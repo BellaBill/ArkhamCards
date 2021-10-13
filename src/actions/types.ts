@@ -636,6 +636,13 @@ export interface CardFetchSuccessAction {
   choiceLang: string;
 }
 
+export const CARD_REQUEST_FETCH = 'CARD_REQUEST_FETCH';
+export interface CardRequestFetchAction {
+  type: typeof CARD_REQUEST_FETCH;
+  cardLang: string;
+  choiceLang: string;
+}
+
 export const CARD_FETCH_ERROR = 'CARD_FETCH_ERROR';
 export interface CardFetchErrorAction {
   type: typeof CARD_FETCH_ERROR;

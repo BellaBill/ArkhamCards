@@ -7,7 +7,6 @@ import {
   filter,
   minBy,
   indexOf,
-  sumBy,
 } from 'lodash';
 import { t } from 'ttag';
 
@@ -142,7 +141,7 @@ export default class DeckValidation {
       if (card.deck_requirements.card) {
         if (find(card.deck_requirements.card, req =>
           !find(cards, theCard => theCard.code === req.code) &&
-          !(req.alternates?.length && req.alternates.length === sumBy(req.alternates, code => find(cards, theCard => theCard.code === code) ? 1 : 0))
+          !(req.alternates?.length && find(req.alternates, code => find(cards, theCard => theCard.code === code)))
         )) {
           return 'investigator';
         }
@@ -373,7 +372,7 @@ export default class DeckValidation {
           var faction_valid = false;
           for (var j = 0; j < option.faction.length; j++) {
             var faction = option.faction[j];
-            if (card.faction_code == faction || card.faction2_code == faction){
+            if (card.faction_code == faction || card.faction2_code == faction || card.faction3_code == faction){
               faction_valid = true;
             }
           }
@@ -391,7 +390,8 @@ export default class DeckValidation {
             selected_faction = this.meta.faction_selected;
           }
           if (card.faction_code != selected_faction &&
-            card.faction2_code != selected_faction){
+            card.faction2_code != selected_faction &&
+            card.faction3_code != selected_faction){
             continue;
           }
         }
@@ -495,6 +495,12 @@ export default class DeckValidation {
                   this.deck_options_counts[i].atleast[card.faction2_code] = 0;
                 }
                 this.deck_options_counts[i].atleast[card.faction2_code] += 1;
+              }
+              if (card.faction3_code){
+                if (!this.deck_options_counts[i].atleast[card.faction3_code]){
+                  this.deck_options_counts[i].atleast[card.faction3_code] = 0;
+                }
+                this.deck_options_counts[i].atleast[card.faction3_code] += 1;
               }
             } else if (option.atleast.types) {
               if (!this.deck_options_counts[i].atleast[card.type_code]) {

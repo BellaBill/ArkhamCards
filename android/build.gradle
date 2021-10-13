@@ -13,7 +13,7 @@ buildscript {
     }
     repositories {
         google()
-        jcenter()        
+        jcenter()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:4.1.0'
@@ -26,6 +26,7 @@ buildscript {
 
 allprojects {
     repositories {
+        mavenCentral()
         mavenLocal()
         google()
         maven {
@@ -38,6 +39,11 @@ allprojects {
         }
         jcenter()
         maven { url 'https://www.jitpack.io' }
+	configurations.all {
+            resolutionStrategy {
+                force "com.facebook.soloader:soloader:0.10.1"
+	    }
+        }
     }
 }
 
