@@ -20,10 +20,10 @@ import LanguageContext from '@lib/i18n/LanguageContext';
 import { useEffectUpdate } from '@components/core/hooks';
 import useReduxMigrator from '@components/settings/useReduxMigrator';
 import ApolloClientContext from '@data/apollo/ApolloClientContext';
-import LoadingSpinner from '@components/core/LoadingSpinner';
+import ArkhamLoadingSpinner from '@components/core/ArkhamLoadingSpinner';
 
-const REFETCH_DAYS = 7;
-const REPROMPT_DAYS = 3;
+const REFETCH_DAYS = 30;
+const REPROMPT_DAYS = 30;
 const REFETCH_SECONDS = REFETCH_DAYS * 24 * 60 * 60;
 const REPROMPT_SECONDS = REPROMPT_DAYS * 24 * 60 * 60;
 
@@ -52,7 +52,7 @@ function ProgressBar({ progress }: { progress: number }) {
 /**
  * Simple component to block children rendering until cards/packs are loaded.
  */
-export default function FetchCardsGate({ promptForUpdate, children }: Props): JSX.Element {
+export default function FetchCardsGate({ promptForUpdate, children }: Props) {
   const { db } = useContext(DatabaseContext);
   const [needsMigration, migrating, doMigrate] = useReduxMigrator();
   const dispatch = useDispatch();
@@ -162,7 +162,7 @@ export default function FetchCardsGate({ promptForUpdate, children }: Props): JS
         <Text style={typography.text}>
           { t`Loading latest cards...` }
         </Text>
-        { promptForUpdate ? <ProgressBar progress={fetchProgress} /> : <LoadingSpinner inline /> }
+        { promptForUpdate ? <ProgressBar progress={fetchProgress} /> : <ArkhamLoadingSpinner autoPlay loop /> }
       </View>
     );
   }

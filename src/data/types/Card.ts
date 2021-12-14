@@ -1,8 +1,8 @@
 import { Entity, Index, Column, PrimaryColumn, JoinColumn, OneToOne } from 'typeorm/browser';
-import { forEach, filter, keys, map, min, omit, find } from 'lodash';
+import { forEach, filter, keys, map, min, omit, find, sortBy, indexOf } from 'lodash';
 import { t } from 'ttag';
 
-import { SortType, SORT_BY_COST, SORT_BY_ENCOUNTER_SET, SORT_BY_FACTION, SORT_BY_FACTION_PACK, SORT_BY_FACTION_XP, SORT_BY_FACTION_XP_TYPE_COST, SORT_BY_PACK, SORT_BY_TITLE, SORT_BY_TYPE, TraumaAndCardData } from '@actions/types';
+import { SortType, SORT_BY_COST, SORT_BY_CYCLE, SORT_BY_ENCOUNTER_SET, SORT_BY_FACTION, SORT_BY_FACTION_PACK, SORT_BY_FACTION_XP, SORT_BY_FACTION_XP_TYPE_COST, SORT_BY_PACK, SORT_BY_TITLE, SORT_BY_TYPE, TraumaAndCardData } from '@actions/types';
 import { BASIC_SKILLS, RANDOM_BASIC_WEAKNESS, FactionCodeType, TypeCodeType, SkillCodeType, BODY_OF_A_YITHIAN } from '@app_constants';
 import DeckRequirement from './DeckRequirement';
 import DeckOption from './DeckOption';
@@ -16,7 +16,7 @@ const SEAL_REGEX = new RegExp('.*Seal \\(.+\\)\\..*');
 const HEALS_HORROR_REGEX = new RegExp('[Hh]eals? (that much )?((\\d+|all|(X total)) damage (from that asset )?(and|or) )?((\\d+|all|(X total)) )?horror');
 export const SEARCH_REGEX = /["“”‹›«»〞〝〟„＂❝❞‘’❛❜‛',‚❮❯\(\)\-\.…]/g;
 
-export const CARD_NUM_COLUMNS = 125;
+export const CARD_NUM_COLUMNS = 126;
 function arkham_num(value: number | null | undefined) {
   if (value === null || value === undefined) {
     return '-';
@@ -98,6 +98,7 @@ const HEADER_SELECT = {
   [SORT_BY_ENCOUNTER_SET]: 'c.encounter_code as headerId, c.sort_by_encounter_set_header as headerTitle',
   [SORT_BY_TITLE]: '"0" as headerId',
   [SORT_BY_TYPE]: 'c.sort_by_type as headerId, c.sort_by_type_header as headerTitle',
+  [SORT_BY_CYCLE]: 'c.sort_by_cycle as headerId, c.cycle_name as headerTitle',
 };
 
 export class PartialCard {
@@ -177,7 +178,9 @@ export class PartialCard {
 @Index('sort_pack', ['browse_visible', 'taboo_set_id', 'sort_by_pack', 'position'])
 @Index('sort_pack_encounter', ['browse_visible', 'taboo_set_id', 'sort_by_pack', 'encounter_code', 'encounter_position'])
 @Index('sort_name_xp', ['browse_visible', 'taboo_set_id', 'renderName', 'xp'])
+@Index('sort_cycle_xp', ['browse_visible', 'taboo_set_id', 'sort_by_cycle'])
 @Index('encounter_query_index', ['browse_visible', 'taboo_set_id', 'encounter_code'])
+@Index('type_code', ['type_code'])
 export default class Card {
   @PrimaryColumn('text')
   public id!: string;
@@ -498,6 +501,10 @@ export default class Card {
   @Column('integer', { nullable: true, select: false })
   public sort_by_pack?: number;
   @Column('integer', { nullable: true, select: false })
+  public sort_by_cycle?: number;
+
+
+  @Column('integer', { nullable: true, select: false })
   public browse_visible!: number;
 
   @Column('boolean')
@@ -725,19 +732,31 @@ export default class Card {
     return undefined;
   }
 
+  static basicFactions() {
+    return [t`Guardian`, t`Seeker`, t`Rogue`, t`Mystic`, t`Survivor`];
+  }
+
   static factionHeaderOrder() {
+    const factions = Card.basicFactions();
+    const triples: string[] = [];
+    const doubles: string[] = [];
+    forEach(factions, (f1, idx1) => {
+      forEach(factions, (f2, idx2) => {
+        if (idx1 < idx2) {
+          forEach(factions, (f3, idx3) => {
+            if (idx1 < idx2 && idx2 < idx3) {
+              triples.push(`${f1} / ${f2} / ${f3}`)
+            }
+          });
+          doubles.push(`${f1} / ${f2}`)
+        }
+      });
+    })
     return [
-      t`Guardian`,
-      t`Seeker`,
-      t`Mystic`,
-      t`Rogue`,
-      t`Survivor`,
+      ...factions,
       t`Neutral`,
-      t`Guardian / Rogue`,
-      t`Rogue / Survivor`,
-      t`Survivor / Seeker`,
-      t`Seeker / Mystic`,
-      t`Mystic / Guardian`,
+      ...doubles,
+      ...triples,
       t`Basic Weakness`,
       t`Signature Weakness`,
       t`Weakness`,
@@ -781,13 +800,16 @@ export default class Card {
           return t`Unknown`;
         }
         if (json.faction2_code && json.faction2_name) {
+          const factions = Card.basicFactions();
           const faction1 = Card.factionCodeToName(json.faction_code, json.faction_name);
           const faction2 = Card.factionCodeToName(json.faction2_code, json.faction2_name);
           if (json.faction3_code && json.faction3_name) {
             const faction3 = Card.factionCodeToName(json.faction3_code, json.faction3_name);
-            return `${faction1} / ${faction2} / ${faction3}`;
+            const [f1, f2, f3] = sortBy([faction1, faction2, faction3], x => indexOf(factions, x))
+            return `${f1} / ${f2} / ${f3}`;
           }
-          return `${faction1} / ${faction2}`;
+          const [f1, f2] = sortBy([faction1, faction2], x => indexOf(factions, x));
+          return `${f1} / ${f2}`;
         }
         return Card.factionCodeToName(json.faction_code, json.faction_name);
       }
@@ -1095,7 +1117,7 @@ export default class Card {
     const sort_by_faction = Card.factionHeaderOrder().indexOf(sort_by_faction_header);
     const pack = packsByCode[json.pack_code] || null;
     const cycle_position = pack?.cycle_position || 0;
-    const sort_by_faction_pack = sort_by_faction * 1000 + (cycle_position * 20) + (cycle_position >= 50 ? pack.position : 0);
+    const sort_by_faction_pack = sort_by_faction * 10000 + (cycle_position * 20) + (cycle_position >= 50 ? pack.position : 0);
     const sort_by_faction_pack_header = `${sort_by_faction_header} - ${json.pack_name}`;
 
     const basic_type_header = Card.typeSortHeader(json, true);
@@ -1105,6 +1127,9 @@ export default class Card {
       `${sort_by_faction_header} - ${basic_type_header}`;
 
     const sort_by_pack = pack ? (pack.cycle_position * 100 + pack.position) : -1;
+
+    const sort_by_cycle = (pack ? pack.cycle_position : 100) * 1000 + sort_by_faction * 100 + sort_by_type;
+
     const sort_by_cost_header = (json.cost === null || json.cost === undefined) ? t`Cost: None` : t`Cost: ${json.cost}`;
     const sort_by_encounter_set_header = json.encounter_name ||
       (linked_card && linked_card.encounter_name) ||
@@ -1208,6 +1233,7 @@ export default class Card {
       sort_by_encounter_set_header,
       sort_by_faction_pack_header,
       sort_by_faction_xp_header,
+      sort_by_cycle,
     };
     if (result.type_code === 'story' && result.linked_card && result.linked_card.type_code === 'location') {
       // console.log(`Reversing ${result.name} to ${result.linked_card.name}`);
